@@ -54,7 +54,8 @@ class OBJ3DModel:
                 line_of_numbers = [float(i)
                                    for i in line[2:].strip('\n').split(' ')]
                 self.points.append(
-                    Point(line_of_numbers[0], line_of_numbers[1], line_of_numbers[2]))
+                    Point(1000 - line_of_numbers[1] * 10, (line_of_numbers[0] + 50) * 10, line_of_numbers[
+                        2] * 10))  # чтоб лиса стояла вертикально мордой вперед для изображения 1000 на 1000
             elif line[:2] == 'f ':
                 line_of_numbers = line[2:].strip('\n').split(' ')
                 temp_polygons = []
@@ -261,16 +262,17 @@ class ImageClass:
                     raise Exception("Invalid polygon")
 
             for i in range(len(polygons)):
-                color = Color(randint(0,255), randint(0,255), randint(0,255),randint(0,255))
-                points_for_triangle = [Point(points[polygons[i][0] - 1].getX(), points[polygons[i][0] - 1].getY(), 0),
-                                        Point(
-                                            points[polygons[i][1] - 1].getX(), points[polygons[i][1] - 1].getY(), 0),
-                                        Point(points[polygons[i][2] - 1].getX(), points[polygons[i][2] - 1].getY(), 0)]
-                self.drawTriangle(points_for_triangle, color)
+                points_for_triangle = [Point(points[polygons[i][0] - 1].getX(), points[polygons[i][0] - 1].getY(),
+                                             points[polygons[i][0] - 1].getZ()),
+                                       Point(
+                                           points[polygons[i][1] - 1].getX(), points[polygons[i][1] - 1].getY(),
+                                           points[polygons[i][1] - 1].getZ()),
+                                       Point(points[polygons[i][2] - 1].getX(), points[polygons[i][2] - 1].getY(),
+                                             points[polygons[i][2] - 1].getZ())]
+                self.drawTriangle(points_for_triangle)
         except Exception as e:
             print("Ошибка при отрисовке полигона. Код ошибки:")
             print(e.args)
-
 
     def calculateBarycentricCoordinates(self, x, y, x0, y0, x1, y1, x2, y2):
 
@@ -302,35 +304,49 @@ class ImageClass:
             points[i].y = int(points[i].y)
             points[i].z = int(points[i].z)
 
-    def drawTriangle(self, points: List[Point], color: Color):
+    def drawTriangle(self, points: List[Point]):
         x_min = min(points[0].getX(), points[1].getX(), points[2].getX())
         y_min = min(points[0].getY(), points[1].getY(), points[2].getY())
         x_max = max(points[0].getX(), points[1].getX(), points[2].getX())
         y_max = max(points[0].getY(), points[1].getY(), points[2].getY())
         try:
-            if (x_min < 0):
+            if x_min < 0 or x_max > self.H or y_min < 0 or y_max > self.W:
                 raise Exception('Треугольник не помещается на картинке')
-            if (x_max > self.H):
-                raise Exception('Треугольник не помещается на картинке')
-            if (y_min < 0):
-                raise Exception('Треугольник не помещается на картинке')
-            if (y_max > self.W):
-                raise Exception('Треугольник не помещается на картинке')
-            for x_i in range(x_min, x_max):
-                for y_j in range(y_min, y_max):
+
+            n = self.calculatingNormal(points[0].getX(),
+                                       points[1].getX(),
+                                       points[2].getX(),
+                                       points[0].getY(),
+                                       points[1].getY(),
+                                       points[2].getY(),
+                                       points[0].getZ(),
+                                       points[1].getZ(),
+                                       points[2].getZ())
+            n_l = np.dot(n, [0, 0, 1])  # [0, 0, 1] означает что будут отрисовываться полигоны, которые выдны с лицевой стороны лисы
+            n_l_norm = n_l / (np.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]))
+            if n_l_norm > 0:
+                return
+            color = Color(255 * np.abs(n_l_norm), 0, 0)
+            for x_i in range(int(x_min), int(x_max)):
+                for y_j in range(int(y_min), int(y_max)):
                     ls_1 = self.calculateBarycentricCoordinates(x_i, y_j,
                                                                 points[0].getX(
                                                                 ), points[0].getY(),
                                                                 points[1].getX(
                                                                 ), points[1].getY(),
                                                                 points[2].getX(
-                                                                ), points[2].getY()
-                                                                )
+                                                                ), points[2].getY())
                     peep = np.all(np.array(ls_1) > 0)
                     if (peep):
                         self.setPixel(x_i, y_j, color.getR(),
                                       color.getG(), color.getB())
-                        print('Отрисовал')
+                        # print('Отрисовал')
         except Exception as e:
             print("Ошибка при отрисовке треугольника. Код ошибки:")
             print(e.args)
+
+    def calculatingNormal(self, x0, x1, x2, y0, y1, y2, z0, z1, z2):
+        vect1 = np.array([x1 - x0, y1 - y0, z1 - z0])
+        vect2 = np.array([x1 - x2, y1 - y2, z1 - z2])
+        n = np.cross(vect1, vect2)
+        return n
