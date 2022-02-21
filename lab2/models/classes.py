@@ -54,7 +54,7 @@ class OBJ3DModel:
                 line_of_numbers = [float(i)
                                    for i in line[2:].strip('\n').split(' ')]
                 self.points.append(
-                    Point(1000 - line_of_numbers[1] * 10, (line_of_numbers[0] + 50) * 10, line_of_numbers[
+                    Point(900 - line_of_numbers[1] * 10, (line_of_numbers[0] + 50) * 10, line_of_numbers[
                         2] * 10))  # чтоб лиса стояла вертикально мордой вперед для изображения 1000 на 1000
             elif line[:2] == 'f ':
                 line_of_numbers = line[2:].strip('\n').split(' ')
@@ -84,6 +84,7 @@ class ImageClass:
                 for j in range(0, self.W):
                     if len(self.matrixImage[i][j]) != 3:
                         raise Exception("Не соответствующие размеры матрицы.")
+            self.matrixZ = np.zeros((self.H, self.W))
         except Exception as e:
             print("Ошибка при инициализации матрицы. Код ошибки:")
             print(e.args)
@@ -330,16 +331,18 @@ class ImageClass:
             for x_i in range(int(x_min), int(x_max)):
                 for y_j in range(int(y_min), int(y_max)):
                     ls_1 = self.calculateBarycentricCoordinates(x_i, y_j,
-                                                                points[0].getX(
-                                                                ), points[0].getY(),
-                                                                points[1].getX(
-                                                                ), points[1].getY(),
-                                                                points[2].getX(
-                                                                ), points[2].getY())
+                                                                points[0].getX(),
+                                                                points[0].getY(),
+                                                                points[1].getX(),
+                                                                points[1].getY(),
+                                                                points[2].getX(),
+                                                                points[2].getY())
                     peep = np.all(np.array(ls_1) > 0)
-                    if (peep):
-                        self.setPixel(x_i, y_j, color.getR(),
-                                      color.getG(), color.getB())
+                    if peep:
+                        z_ = ls_1[0] * points[0].getZ() + ls_1[1] * points[1].getZ() + ls_1[2] * points[2].getZ()
+                        if z_ > self.matrixZ[x_i][y_j]:
+                            self.matrixZ[x_i][y_j] = z_
+                            self.setPixel(x_i, y_j, color.getR(), color.getG(), color.getB())
                         # print('Отрисовал')
         except Exception as e:
             print("Ошибка при отрисовке треугольника. Код ошибки:")
