@@ -54,8 +54,8 @@ class OBJ3DModel:
                 line_of_numbers = [float(i)
                                    for i in line[2:].strip('\n').split(' ')]
                 self.points.append(
-                    Point(900 - line_of_numbers[1] * 10, line_of_numbers[0]*10 + 500, line_of_numbers[
-                        2] * 10))  # чтоб лиса стояла вертикально мордой вперед для изображения 1000 на 1000
+                    # Point(900 - line_of_numbers[1] * 10, line_of_numbers[0]*10 + 500, line_of_numbers[2] * 10))
+                    Point(line_of_numbers[1], line_of_numbers[0], line_of_numbers[2]))
             elif line[:2] == 'f ':
                 line_of_numbers = line[2:].strip('\n').split(' ')
                 temp_polygons = []
@@ -289,22 +289,29 @@ class ImageClass:
         lambdas = [lambda0, lambda1, lambda2]
         return lambdas
 
-    def transformPoints(self, points: List[Point]):
+    def shiftPoints(self, points: List[Point]):
+        changePoints = points
         minValueY = 0
         minValueZ = 0
+        minValueX = 0
         for i in range(len(points)):
-            if points[i].getY() < minValueY:
-                minValueY = points[i].getY()
-            if points[i].getZ() < minValueZ:
-                minValueZ = points[i].getZ()
+            if changePoints[i].getY() < minValueY:
+                minValueY = changePoints[i].getY()
+            if changePoints[i].getZ() < minValueZ:
+                minValueZ = changePoints[i].getZ()
+            if changePoints[i].getX() < minValueX:
+                minValueX = changePoints[i].getX()
         for i in range(len(points)):
-            points[i].y -= minValueY
-            points[i].z -= minValueZ
+            changePoints[i].y -= minValueY
+            changePoints[i].z -= minValueZ
+            changePoints[i].x -= minValueX
 
         for i in range(len(points)):
-            points[i].y = int(points[i].y)
-            points[i].z = int(points[i].z)
-
+            changePoints[i].y = int(changePoints[i].y)
+            changePoints[i].z = int(changePoints[i].z)
+            changePoints[i].x = int(changePoints[i].x)
+        return changePoints
+  
     def drawTriangle(self, points: List[Point]):
         x_min = min(points[0].getX(), points[1].getX(), points[2].getX())
         y_min = min(points[0].getY(), points[1].getY(), points[2].getY())
@@ -352,3 +359,47 @@ class ImageClass:
         vect2 = np.array([x1 - x2, y1 - y2, z1 - z2])
         n = np.cross(vect1, vect2)
         return n
+
+    def getProjectiveTransformationPoints(self, points, t, intrinsic):
+        points_list = []
+        for point in points: 
+            points_list.append([point.getX(),point.getY(), point.getZ()])
+
+        points_np = np.array(points_list).T
+        # Умножаем матримцу внутренних параметров на (матрицу координат + t)
+        projectiveTransformationPoints = np.matmul(intrinsic, (points_np + t))
+
+        # Осуществляем деление на Z 
+        projectiveTransformationPoints /= projectiveTransformationPoints[2]  
+
+        return projectiveTransformationPoints
+
+    def getModelRotationPoints(self, projectiveTransformationPoints, angles):
+        # Приводим углы к радианам
+        alpha, beta, gamma = [180 * k/np.pi for k in angles]
+        
+        # Вычисляем углы
+        cosa = np.cos(alpha)
+        sina = np.sin(alpha)
+        cosb = np.cos(beta)
+        sinb = np.sin(beta)
+        cosg = np.cos(gamma)
+        sing = np.sin(gamma)
+
+        #Задаем матрицы поворота
+        matRotateX = np.array([[1, 0, 0], [0, cosa, -sina], [0, sina, cosa]])
+        matRotateY = np.array([[cosb, 0, sinb], [0, 1, 0], [-sinb, 0, cosb]])
+        matRotateZ = np.array([[cosg, -sing, 0], [sing, cosg, 0], [0, 0, 1]])
+        
+        # Вычисляем матрицу поворота по всем осям
+        XY = np.matmul(matRotateX,matRotateY)
+        R = np.matmul(XY, matRotateZ)
+        
+        # Вычисляем поворот модели
+        turnPoints = np.matmul(R, projectiveTransformationPoints)
+        turnPoints = turnPoints.T.tolist()
+
+        modelRotationPoints = []
+        for turnpoint in turnPoints:
+            modelRotationPoints.append(Point(turnpoint[0], turnpoint[1], turnpoint[2]))
+        return modelRotationPoints
