@@ -359,15 +359,11 @@ class ImageClass:
         vect2 = np.array([x1 - x2, y1 - y2, z1 - z2])
         n = np.cross(vect1, vect2)
         return n
-
+            
     def getProjectiveTransformationPoints(self, points, t, intrinsic):
-        points_list = []
-        for point in points: 
-            points_list.append([point.getX(),point.getY(), point.getZ()])
-
-        points_np = np.array(points_list).T
+        points_np = np.array(points).T
         # Умножаем матримцу внутренних параметров на (матрицу координат + t)
-        projectiveTransformationPoints = np.matmul(intrinsic, (points_np + t))
+        projectiveTransformationPoints = np.matmul(intrinsic, (points_np.reshape(3,1) + t))
 
         # Осуществляем деление на Z 
         projectiveTransformationPoints /= projectiveTransformationPoints[2]  
@@ -399,7 +395,14 @@ class ImageClass:
         turnPoints = np.matmul(R, projectiveTransformationPoints)
         turnPoints = turnPoints.T.tolist()
 
-        modelRotationPoints = []
-        for turnpoint in turnPoints:
-            modelRotationPoints.append(Point(turnpoint[0], turnpoint[1], turnpoint[2]))
-        return modelRotationPoints
+        return turnPoints
+
+
+    def getModelRotationTransformationPoints(self, points, t, intrinsic, angles):
+        points_list = []
+        for point in points: 
+            pointL = [point.getX(),point.getY(), point.getZ()]
+            gptp = self.getProjectiveTransformationPoints(pointL, t, intrinsic)
+            mrp = self.getModelRotationPoints(gptp, angles)
+            points_list.append(Point(mrp[0][0], mrp[0][1], mrp[0][2]))
+        return points_list

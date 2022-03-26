@@ -24,12 +24,7 @@ image.initializeMatrixAsWhiteImage()
 
 # Осуществляем сдвиг координат для корректного отображения на изображении
 shiftedPoints = image.shiftPoints(obj.getPoints())
-
-# Получаем координаты экранные (u, v, 1)
-projectiveTransformationPoints = image.getProjectiveTransformationPoints(shiftedPoints, t, intrinsic) 
-
 # Поворачиваем координаты лисы
-modelRotationPoints = image.getModelRotationPoints(projectiveTransformationPoints, angles) 
-
+modelRotationPoints = image.getModelRotationTransformationPoints(shiftedPoints, t,intrinsic,angles)
 image.drawColorPolygons(modelRotationPoints, obj.getPolygons())
 image.saveImageToFilePNG('fox.png')
