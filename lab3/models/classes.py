@@ -55,7 +55,7 @@ class OBJ3DModel:
                                    for i in line[2:].strip('\n').split(' ')]
                 self.points.append(
                     # Point(900 - line_of_numbers[1] * 10, line_of_numbers[0]*10 + 500, line_of_numbers[2] * 10))
-                    Point(line_of_numbers[1], line_of_numbers[0], line_of_numbers[2]))
+                    Point(line_of_numbers[0], line_of_numbers[1], line_of_numbers[2]))
             elif line[:2] == 'f ':
                 line_of_numbers = line[2:].strip('\n').split(' ')
                 temp_polygons = []
@@ -366,7 +366,7 @@ class ImageClass:
         projectiveTransformationPoints = np.matmul(intrinsic, (points_np.reshape(3,1) + t))
 
         # Осуществляем деление на Z 
-        projectiveTransformationPoints /= projectiveTransformationPoints[2]  
+        # projectiveTransformationPoints /= projectiveTransformationPoints[2]  
 
         return projectiveTransformationPoints
 
@@ -383,9 +383,9 @@ class ImageClass:
         sing = np.sin(gamma)
 
         #Задаем матрицы поворота
-        matRotateX = np.array([[1, 0, 0], [0, cosa, -sina], [0, sina, cosa]])
-        matRotateY = np.array([[cosb, 0, sinb], [0, 1, 0], [-sinb, 0, cosb]])
-        matRotateZ = np.array([[cosg, -sing, 0], [sing, cosg, 0], [0, 0, 1]])
+        matRotateX = np.array([[1, 0, 0], [0, cosa, sina], [0, -sina, cosa]]).reshape(3,3)
+        matRotateY = np.array([[cosb, 0, sinb], [0, 1, 0], [-sinb, 0, cosb]]).reshape(3,3)
+        matRotateZ = np.array([[cosg, sing, 0], [-sing, cosg, 0], [0, 0, 1]]).reshape(3,3)
         
         # Вычисляем матрицу поворота по всем осям
         XY = np.matmul(matRotateX,matRotateY)
