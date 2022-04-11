@@ -4,8 +4,8 @@ from PIL import Image
 from models.classes import ImageClass, OBJ3DModel, Point, Color
 # Задаем параметры изображения 
 # высота, ширина, масштаб, центр, углы поворота
-height = 4000
-weight = 1000
+height = 2000
+weight = 2000
 a_x = 10
 a_y = 10
 u_0 = 10

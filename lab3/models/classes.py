@@ -44,12 +44,19 @@ class Point:
         return self.z
 
 
+numberOfNormals = []
+normals = []
+
+
 class OBJ3DModel:
     def __init__(self, path: str):
         f = open(path, mode='r')
         self.points = []
         self.polygons = []
         for line in f:
+            if line[:3] == 'vn ':
+                normals.append([float(i)
+                                for i in line[3:].strip('\n').split(' ')])
             if line[:2] == 'v ':
                 line_of_numbers = [float(i)
                                    for i in line[2:].strip('\n').split(' ')]
@@ -59,6 +66,7 @@ class OBJ3DModel:
             elif line[:2] == 'f ':
                 line_of_numbers = line[2:].strip('\n').split(' ')
                 temp_polygons = []
+                numberOfNormals.append(line_of_numbers[0].split('/')[2])
                 for i in range(3):
                     line_to_numbers = line_of_numbers[i].split('/')
                     temp_polygons.append(int(line_to_numbers[0]))
@@ -270,7 +278,7 @@ class ImageClass:
                                            points[polygons[i][1] - 1].getZ()),
                                        Point(points[polygons[i][2] - 1].getX(), points[polygons[i][2] - 1].getY(),
                                              points[polygons[i][2] - 1].getZ())]
-                self.drawTriangle(points_for_triangle)
+                self.drawTriangle(points_for_triangle, polygons[i][0], polygons[i][1], polygons[i][2])
         except Exception as e:
             print("Ошибка при отрисовке полигона. Код ошибки:")
             print(e.args)
@@ -311,8 +319,8 @@ class ImageClass:
             changePoints[i].z = int(changePoints[i].z)
             changePoints[i].x = int(changePoints[i].x)
         return changePoints
-  
-    def drawTriangle(self, points: List[Point]):
+
+    def drawTriangle(self, points: List[Point], numberPointOne, numberPointTwo, numberPointThree):
         x_min = min(points[0].getX(), points[1].getX(), points[2].getX())
         y_min = min(points[0].getY(), points[1].getY(), points[2].getY())
         x_max = max(points[0].getX(), points[1].getX(), points[2].getX())
@@ -334,7 +342,17 @@ class ImageClass:
             n_l_norm = n_l / (np.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]))
             if n_l_norm > 0:
                 return
-            color = Color(255 * abs(n_l_norm), 0, 0)
+            l = [0, 1, 0]   # направление света
+            n0 = normals[int(numberOfNormals[numberPointOne - 1])]
+            n1 = normals[int(numberOfNormals[numberPointTwo - 1])]
+            n2 = normals[int(numberOfNormals[numberPointThree - 1])]
+            l0 = np.dot(n0, l) / (np.sqrt(n0[0] * n0[0] + n0[1] * n0[1] + n0[2] * n0[2]) * np.sqrt(
+                l[0] * l[0] + l[1] * l[1] + l[2] * l[2]))
+            l1 = np.dot(n1, l) / (np.sqrt(n1[0] * n1[0] + n1[1] * n1[1] + n1[2] * n1[2]) * np.sqrt(
+                l[0] * l[0] + l[1] * l[1] + l[2] * l[2]))
+            l2 = np.dot(n2, l) / (np.sqrt(n2[0] * n2[0] + n2[1] * n2[1] + n2[2] * n2[2]) * np.sqrt(
+                l[0] * l[0] + l[1] * l[1] + l[2] * l[2]))
+
             for x_i in range(round(x_min), round(x_max)):
                 for y_j in range(round(y_min), round(y_max)):
                     ls_1 = self.calculateBarycentricCoordinates(x_i, y_j,
@@ -349,7 +367,7 @@ class ImageClass:
                         z_ = ls_1[0] * points[0].getZ() + ls_1[1] * points[1].getZ() + ls_1[2] * points[2].getZ()
                         if z_ > self.matrixZ[x_i][y_j]:
                             self.matrixZ[x_i][y_j] = z_
-                            self.setPixel(x_i, y_j, color.getR(), color.getG(), color.getB())
+                            self.setPixel(x_i, y_j, 255 * (ls_1[0] * abs(l0) + ls_1[1] * abs(l1) + ls_1[2] * abs(l2)), 0, 0)
         except Exception as e:
             print("Ошибка при отрисовке треугольника. Код ошибки:")
             print(e.args)
@@ -396,7 +414,6 @@ class ImageClass:
         turnPoints = turnPoints.T.tolist()
 
         return turnPoints
-
 
     def getModelRotationTransformationPoints(self, points, t, intrinsic, angles):
         points_list = []
